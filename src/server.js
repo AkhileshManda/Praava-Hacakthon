@@ -2,7 +2,7 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') }
 const express = require('express');
 const path = require('path');
 const db = require('./inventory/db');
-const bot = require('./bot/telegram');
+const bot = require('./bot/linq');
 const invoice = require('./invoice/invoice');
 const prava = require('./payments/prava');
 
@@ -172,10 +172,10 @@ async function triggerRestock(product) {
   // 1. Create Prava Session with negotiated amount
   const session = await prava.createPravaSession({ orderId, product, quantity, totalAmount });
   
-  // 2. Notify via Telegram
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (chatId) {
-    await bot.sendApprovalMessage(chatId, product, session.iframe_url);
+  // 2. Notify via Linq (SMS/iMessage)
+  const phoneNumber = process.env.LINQ_TO_NUMBER || '+15556667777';
+  if (phoneNumber) {
+    await bot.sendApprovalMessage(phoneNumber, product, session.iframe_url);
   }
   
   broadcast('pending_added', {
@@ -203,9 +203,9 @@ async function triggerRestock(product) {
       totalAmount
     });
     
-    // 5. Send Invoice to Telegram
-    if (chatId) {
-      await bot.sendInvoice(chatId, invoiceBuffer);
+    // 5. Send Invoice via Linq
+    if (phoneNumber) {
+      await bot.sendInvoice(phoneNumber, invoiceBuffer);
     }
     
     // 6. Update DB
