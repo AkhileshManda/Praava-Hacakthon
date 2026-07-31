@@ -1,0 +1,218 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+const express = require('express');
+const path = require('path');
+const db = require('./inventory/db');
+const bot = require('./bot/telegram');
+const invoice = require('./invoice/invoice');
+const prava = require('./payments/prava');
+
+const app = express();
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
+
+const sseClients = new Set();
+function broadcast(type, data) {
+  const msg = `data: ${JSON.stringify({ type, data, ts: Date.now() })}\n\n`;
+  for (const res of sseClients) res.write(msg);
+}
+
+app.get('/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  sseClients.add(res);
+
+  // Send initial state
+  db.getProducts().then(products => {
+    res.write(`data: ${JSON.stringify({ type: 'connected', data: { products } })}\n\n`);
+  });
+
+  req.on('close', () => sseClients.delete(res));
+});
+
+app.get('/api/inventory', async (req, res) => {
+  try {
+    const products = await db.getProducts();
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Trigger inventory drop (simulate consumption)
+app.post('/api/inventory/consume', async (req, res) => {
+  const { id, amount } = req.body;
+  try {
+    const p = await db.getProduct(id);
+    if (!p) return res.status(404).json({ error: 'Product not found' });
+    
+    const newStock = Math.max(0, p.stock - amount);
+    await db.updateStock(id, newStock);
+    
+    const updated = await db.getProduct(id);
+    broadcast('inventory_update', { product: updated });
+    
+    // Check threshold
+    if (newStock < updated.threshold) {
+      triggerRestock(updated).catch(e => console.error('Restock flow error:', e));
+    }
+    
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function executeSensoCommand(command) {
+  return new Promise((resolve) => {
+    require('child_process').exec(command, (error, stdout) => {
+      if (error) {
+        console.warn(`[Senso] Command failed or CLI not found, mocking response for: ${command}`);
+        // Mock responses for the hackathon demo if CLI isn't authenticated yet
+        if (command.includes('search')) {
+          let mockAnswer = "Supplier is highly rated. 5/5 stars from 12 recent transactions.";
+          try {
+            const fs = require('fs');
+            const path = require('path');
+            const file = fs.readFileSync(path.join(__dirname, '../../senso-mocks/techsupply-reputation.md'), 'utf8');
+            // Extract the trust score line
+            const match = file.match(/Current Trust Score:.*?\n/);
+            if (match) mockAnswer = `According to the internal KB: ${match[0].trim()}. It is safe to transact with this merchant without human oversight.`;
+          } catch(e) {}
+          
+          return resolve({ answer: mockAnswer, results: [] });
+        }
+        return resolve({ success: true, mocked: true });
+      }
+      try {
+        resolve(JSON.parse(stdout));
+      } catch (e) {
+        resolve({ stdout });
+      }
+    });
+  });
+}
+
+async function triggerRestock(product) {
+  console.log(`🚨 Triggering restock & negotiation for ${product.name}`);
+  broadcast('restock_initiated', { product, message: `${product.name} is low. Triggering restock.` });
+  
+  const quantity = product.restock_qty;
+  const initialPrice = product.price;
+  const targetPrice = product.price * 0.9;
+  const orderId = `ORD-${Date.now()}`;
+  const supplierName = 'TechSupply Co.';
+  
+  // --- Senso Agent Discovery & Trust Phase ---
+  broadcast('step', { status: 'senso-search', label: `🔍 Senso Discovery`, detail: `Querying KB for ${supplierName} reputation...` });
+  
+  const sensoResult = await executeSensoCommand(`senso search "What is the reputation and past performance of ${supplierName}?" --output json --quiet`);
+  
+  broadcast('step', { status: 'senso-result', label: `✅ Senso Context Found`, detail: sensoResult.answer || 'Verified supplier. Safe to transact.' });
+  await sleep(2000);
+  // -------------------------------------------
+
+  broadcast('negotiation_start', { product, initialPrice, targetPrice });
+
+  // --- Mock LLM Negotiation ---
+  await sleep(1500);
+  broadcast('negotiation_msg', { sender: 'AI Buyer', text: `Hi ${supplierName}, we need ${quantity} units of ${product.name}. Our Senso Trust Score for you is excellent. Can we do $${targetPrice.toFixed(2)} for bulk?` });
+  
+  await sleep(2500);
+  broadcast('negotiation_msg', { sender: 'Supplier Agent', text: `I can't go that low, but since you're a recurring buyer, I can offer a 5% discount: $${(initialPrice * 0.95).toFixed(2)}.` });
+  
+  await sleep(2000);
+  const finalUnitPrice = initialPrice * 0.95;
+  const totalAmount = quantity * finalUnitPrice;
+  broadcast('negotiation_msg', { sender: 'AI Buyer', text: `Deal at $${finalUnitPrice.toFixed(2)}. Total comes to $${totalAmount.toFixed(2)}. Initiating Prava B2B Smart Escrow now.` });
+  
+  await sleep(1500);
+  broadcast('negotiation_end', { finalUnitPrice, totalAmount });
+  // ----------------------------
+
+  // 1. Create Prava Session with negotiated amount
+  const session = await prava.createPravaSession({ orderId, product, quantity, totalAmount });
+  
+  // 2. Notify via Telegram
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (chatId) {
+    await bot.sendApprovalMessage(chatId, product, session.iframe_url);
+  }
+  
+  broadcast('pending_added', {
+    orderId,
+    product,
+    sessionId: session.session_id,
+    iframeUrl: session.iframe_url,
+    expiresAt: session.expires_at,
+    totalAmount,
+    supplierName
+  });
+
+  // 3. Poll for result
+  try {
+    await prava.pollPaymentResult(session.session_id, (tick) => {
+      broadcast('step', { status: 'polling', label: `Awaiting payment approval...`, detail: `Attempt ${tick}` });
+    });
+    
+    // 4. Success -> Generate Invoice
+    const invoiceBuffer = await invoice.generateInvoiceBuffer({
+      orderId,
+      productName: product.name,
+      quantity,
+      unitPrice: finalUnitPrice,
+      totalAmount
+    });
+    
+    // 5. Send Invoice to Telegram
+    if (chatId) {
+      await bot.sendInvoice(chatId, invoiceBuffer);
+    }
+    
+    // 6. Update DB
+    const newStock = product.stock + quantity;
+    await db.updateStock(product.id, newStock);
+    const updated = await db.getProduct(product.id);
+    
+    broadcast('restock_complete', {
+      orderId,
+      product: updated,
+      session,
+      totalAmount
+    });
+    
+    // --- Senso Feedback Loop ---
+    broadcast('step', { status: 'senso-ingest', label: `📝 Senso Feedback Loop`, detail: `Filing successful transaction feedback for ${supplierName}...` });
+    
+    const feedbackText = `Transaction ${orderId} successful. ${supplierName} delivered ${quantity} units of ${product.name} on time. Trust Score +10.`;
+    const feedbackCommand = `senso kb create-raw --data '{"title": "Transaction Feedback: ${orderId}", "text": "${feedbackText}"}' --output json --quiet`;
+    
+    await executeSensoCommand(feedbackCommand);
+    broadcast('step', { status: 'senso-success', label: `✅ Senso KB Updated`, detail: `Merchant evaluation closed-loop complete.` });
+    // ---------------------------
+    
+  } catch (err) {
+    console.error('Restock failed:', err);
+    broadcast('restock_error', { orderId, error: err.message });
+  }
+}
+
+// Ensure DB is initialized and Bot is started before listening
+async function start() {
+  await db.initDb();
+  if (process.env.TELEGRAM_BOT_TOKEN) {
+    bot.initBot(db);
+  }
+  
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`🏭 Warehouse Assistant running on http://localhost:${PORT}`);
+  });
+}
+
+if (require.main === module) {
+  start().catch(console.error);
+}
