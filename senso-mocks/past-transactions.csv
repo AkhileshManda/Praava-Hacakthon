@@ -1,0 +1,5 @@
+transaction_id,date,supplier_name,item,quantity,total_amount,status,feedback
+TXN-101,2026-05-12,TechSupply Co.,MacBook Pro M3,10,11500.00,completed,Delivered 1 day early.
+TXN-102,2026-06-01,TechSupply Co.,GPU Server Rack,2,24000.00,completed,Perfect condition. No issues.
+TXN-103,2026-06-15,GlobalBev Inc.,Diet Coke,100,50.00,completed,Standard delivery.
+TXN-104,2026-07-10,TechSupply Co.,MacBook Pro M3,5,5800.00,completed,Quick negotiation. Trusted supplier.
