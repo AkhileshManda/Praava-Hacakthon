@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Warehouse Assistant Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface2: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 20px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--surface2);
+    }
+    h1 { margin: 0; font-size: 24px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    
+    .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 24px;
+      border: 1px solid var(--surface2);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .card-title { font-size: 16px; font-weight: 600; margin: 0 0 20px 0; color: var(--muted); display: flex; align-items: center; justify-content: space-between; }
+
+    /* Inventory Table */
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--surface2); }
+    th { color: var(--muted); font-weight: 500; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { font-size: 14px; }
+    .status-badge {
+      padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
+    }
+    .status-ok { background: rgba(16,185,129,0.1); color: var(--success); }
+    .status-low { background: rgba(245,158,11,0.1); color: var(--warning); }
+    .status-out { background: rgba(239,68,68,0.1); color: var(--danger); }
+    
+    .action-btn {
+      background: var(--surface2); color: var(--text); border: none; padding: 6px 12px;
+      border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s;
+    }
+    .action-btn:hover { background: var(--muted); color: var(--bg); }
+
+    /* Feed */
+    .feed { max-height: 400px; overflow-y: auto; }
+    .feed-item {
+      display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--surface2);
+    }
+    .feed-item:last-child { border-bottom: none; }
+    .feed-time { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .feed-content { flex: 1; font-size: 13px; }
+    .feed-title { font-weight: 600; margin-bottom: 4px; }
+    
+    .pending-approval {
+      background: rgba(245,158,11,0.1); border: 1px solid var(--warning);
+      padding: 16px; border-radius: 8px; margin-bottom: 16px;
+    }
+    .pending-btn {
+      display: inline-block; background: var(--warning); color: #000;
+      padding: 8px 16px; border-radius: 6px; text-decoration: none;
+      font-size: 13px; font-weight: 600; margin-top: 10px;
+    }
+
+    /* Chat UI */
+    .chat-box {
+      background: var(--surface); border: 1px solid var(--primary);
+      border-radius: var(--radius); overflow: hidden; margin-bottom: 20px;
+      box-shadow: 0 0 15px rgba(59,130,246,0.3); display: none;
+    }
+    .chat-header {
+      background: var(--primary); color: white; padding: 10px 15px;
+      font-weight: 600; display: flex; align-items: center; gap: 8px;
+    }
+    .chat-body { padding: 15px; max-height: 250px; overflow-y: auto; background: var(--bg); }
+    .chat-msg { margin-bottom: 12px; max-width: 85%; font-size: 13px; line-height: 1.4; }
+    .msg-buyer { margin-left: auto; background: var(--primary); color: white; padding: 10px; border-radius: 12px 12px 0 12px; }
+    .msg-supplier { margin-right: auto; background: var(--surface2); color: white; padding: 10px; border-radius: 12px 12px 12px 0; }
+    .msg-sender { font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🏭 Warehouse Command Center</h1>
+    <div style="display:flex;gap:15px;">
+      <span id="connection-status" style="color:var(--success);font-size:14px;display:flex;align-items:center;gap:6px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 10px var(--success);"></span> Live
+      </span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Inventory Overview -->
+    <div class="card">
+      <div class="card-title">📦 Inventory Overview</div>
+      <table>
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Item</th>
+            <th>Stock</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="inventory-body">
+          <tr><td colspan="5" style="text-align:center;color:var(--muted);">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Live Activity & Pending Approvals -->
+    <div>
+      <!-- Negotiation Chat -->
+      <div id="negotiation-chat" class="chat-box">
+        <div class="chat-header">
+          <span style="animation:pulse 1s infinite">🤖</span> B2B Negotiation Agent
+        </div>
+        <div id="chat-messages" class="chat-body"></div>
+      </div>
+
+      <div id="pending-container"></div>
+
+      <div class="card">
+        <div class="card-title">⚡ Live Activity Feed</div>
+        <div class="feed" id="activity-feed">
+          <div style="text-align:center;color:var(--muted);padding:20px;">Waiting for events...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+let state = { products: [], pending: [] };
+
+// Consume 1 unit to simulate usage
+async function consumeItem(id) {
+  try {
+    await fetch('/api/inventory/consume', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, amount: 1 })
+    });
+  } catch(e) { console.error(e); }
+}
+
+const es = new EventSource('/events');
+es.onmessage = (e) => {
+  const { type, data, ts } = JSON.parse(e.data);
+  const time = new Date(ts).toLocaleTimeString();
+  
+  if (type === 'connected') {
+    state.products = data.products;
+    renderInventory();
+  } else if (type === 'inventory_update') {
+    state.products = state.products.map(p => p.id === data.product.id ? data.product : p);
+    renderInventory();
+  } else if (type === 'negotiation_start') {
+    document.getElementById('negotiation-chat').style.display = 'block';
+    document.getElementById('chat-messages').innerHTML = '';
+    addFeed(time, `🤖 Autonomous Negotiation Started`, `Targeting $${data.targetPrice.toFixed(2)} per ${data.product.name}`);
+  } else if (type === 'negotiation_msg') {
+    const chat = document.getElementById('chat-messages');
+    const isBuyer = data.sender === 'AI Buyer';
+    chat.innerHTML += `
+      <div class="chat-msg ${isBuyer ? 'msg-buyer' : 'msg-supplier'}">
+        <div class="msg-sender">${data.sender}</div>
+        ${data.text}
+      </div>
+    `;
+    chat.scrollTop = chat.scrollHeight;
+  } else if (type === 'negotiation_end') {
+    addFeed(time, `🤝 Deal Reached`, `Final Price: $${data.finalUnitPrice.toFixed(2)}. Preparing Prava Escrow...`);
+    setTimeout(() => { document.getElementById('negotiation-chat').style.display = 'none'; }, 8000);
+  } else if (type === 'pending_added') {
+    state.pending.push(data);
+    renderPending();
+    addFeed(time, `🚨 Restock Request: ${data.product.name}`, `Awaiting Prava payment approval. Order: ${data.orderId}`);
+  } else if (type === 'restock_complete') {
+    state.pending = state.pending.filter(p => p.orderId !== data.orderId);
+    renderPending();
+    addFeed(time, `✅ Restock Complete`, `${data.product.restock_qty}x ${data.product.name} ordered. Invoice sent.`);
+  } else if (type === 'step') {
+    addFeed(time, `🔄 ${data.label}`, data.detail);
+  }
+};
+
+function renderInventory() {
+  const tbody = document.getElementById('inventory-body');
+  tbody.innerHTML = state.products.map(p => {
+    let statusClass = 'status-ok';
+    let statusText = 'OK';
+    if (p.stock === 0) { statusClass = 'status-out'; statusText = 'OUT OF STOCK'; }
+    else if (p.stock <= p.threshold) { statusClass = 'status-low'; statusText = 'LOW'; }
+    
+    return `
+      <tr>
+        <td style="color:var(--muted);font-family:monospace;">#${p.id}</td>
+        <td style="font-weight:500;">${p.name}</td>
+        <td><b>${p.stock}</b> <span style="font-size:11px;color:var(--muted);">/ thres:${p.threshold}</span></td>
+        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+        <td><button class="action-btn" onclick="consumeItem(${p.id})">Consume 1</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderPending() {
+  const container = document.getElementById('pending-container');
+  container.innerHTML = state.pending.map(p => `
+    <div class="pending-approval">
+      <div style="font-weight:600;margin-bottom:5px;">⏳ Awaiting Approval: ${p.product.name}</div>
+      <div style="font-size:13px;">Order ${p.orderId} — Total: $${(p.product.price * p.product.restock_qty).toFixed(2)}</div>
+      <a href="${p.iframeUrl}" target="_blank" class="pending-btn">👆 Pay via Prava</a>
+    </div>
+  `).join('');
+}
+
+function addFeed(time, title, detail) {
+  const feed = document.getElementById('activity-feed');
+  if(feed.innerText.includes('Waiting')) feed.innerHTML = '';
+  feed.innerHTML = `
+    <div class="feed-item">
+      <div class="feed-time">${time}</div>
+      <div class="feed-content">
+        <div class="feed-title">${title}</div>
+        <div style="color:var(--muted);">${detail}</div>
+      </div>
+    </div>
+  ` + feed.innerHTML;
+}
+</script>
+</body>
+</html>
