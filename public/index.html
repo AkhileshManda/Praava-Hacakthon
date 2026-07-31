@@ -2,253 +2,207 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Warehouse Assistant Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aura | Autonomous Inventory Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0f172a;
-      --surface: #1e293b;
-      --surface2: #334155;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --primary: #3b82f6;
-      --primary-hover: #2563eb;
-      --success: #10b981;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --radius: 12px;
+      --bg: #030303;
+      --fg: #ffffff;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.5);
+      --surface: rgba(255, 255, 255, 0.03);
+      --border: rgba(255, 255, 255, 0.08);
     }
-
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0; padding: 20px;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--bg); color: var(--text);
+      background-color: var(--bg);
+      color: var(--fg);
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      line-height: 1.6;
     }
-    header {
+    nav {
       display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--surface2);
+      padding: 24px 5%;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      position: fixed; width: 100%; top: 0; z-index: 100;
     }
-    h1 { margin: 0; font-size: 24px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
-    
-    .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-    
-    .card {
-      background: var(--surface);
-      border-radius: var(--radius);
-      padding: 24px;
-      border: 1px solid var(--surface2);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    .logo {
+      font-size: 20px; font-weight: 700; letter-spacing: -0.5px;
+      display: flex; align-items: center; gap: 8px;
     }
-    .card-title { font-size: 16px; font-weight: 600; margin: 0 0 20px 0; color: var(--muted); display: flex; align-items: center; justify-content: space-between; }
+    .logo-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+    .nav-links a {
+      color: #a1a1aa; text-decoration: none; font-size: 14px; margin-left: 24px;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: #fff; }
+    
+    .hero {
+      min-height: 100vh; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; text-align: center;
+      position: relative; padding: 0 20px;
+    }
+    /* Glow effect behind hero */
+    .hero::before {
+      content: ''; position: absolute; width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(0,0,0,0) 70%);
+      top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: -1;
+    }
+    
+    .badge {
+      background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2);
+      color: #60a5fa; padding: 6px 14px; border-radius: 20px; font-size: 13px;
+      font-weight: 500; margin-bottom: 24px; letter-spacing: 0.5px;
+    }
+    
+    h1 {
+      font-size: 72px; font-weight: 700; letter-spacing: -2.5px;
+      line-height: 1.1; margin-bottom: 24px; max-width: 900px;
+      background: linear-gradient(180deg, #fff 0%, #a1a1aa 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    
+    .subtitle {
+      font-size: 20px; color: #a1a1aa; max-width: 600px; margin-bottom: 40px;
+      font-weight: 300;
+    }
+    
+    .cta-container { display: flex; gap: 16px; }
+    
+    .btn {
+      padding: 14px 28px; border-radius: 8px; font-size: 15px;
+      font-weight: 500; text-decoration: none; cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: var(--fg); color: var(--bg);
+      box-shadow: 0 4px 14px rgba(255,255,255,0.1);
+    }
+    .btn-primary:hover {
+      background: #e4e4e7; transform: translateY(-2px);
+    }
+    .btn-secondary {
+      background: var(--surface); color: var(--fg);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.08);
+    }
 
-    /* Inventory Table */
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--surface2); }
-    th { color: var(--muted); font-weight: 500; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
-    td { font-size: 14px; }
-    .status-badge {
-      padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
+    .features {
+      padding: 100px 5%; max-width: 1200px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
     }
-    .status-ok { background: rgba(16,185,129,0.1); color: var(--success); }
-    .status-low { background: rgba(245,158,11,0.1); color: var(--warning); }
-    .status-out { background: rgba(239,68,68,0.1); color: var(--danger); }
-    
-    .action-btn {
-      background: var(--surface2); color: var(--text); border: none; padding: 6px 12px;
-      border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s;
+    .feature-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 32px;
+      transition: transform 0.3s ease, border-color 0.3s ease;
     }
-    .action-btn:hover { background: var(--muted); color: var(--bg); }
+    .feature-card:hover {
+      transform: translateY(-5px); border-color: rgba(255,255,255,0.2);
+    }
+    .feature-icon {
+      font-size: 24px; margin-bottom: 20px; width: 48px; height: 48px;
+      background: rgba(255,255,255,0.05); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border);
+    }
+    .feature-card h3 { font-size: 18px; margin-bottom: 12px; font-weight: 600; }
+    .feature-card p { font-size: 14px; color: #a1a1aa; }
 
-    /* Feed */
-    .feed { max-height: 400px; overflow-y: auto; }
-    .feed-item {
-      display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--surface2);
+    .integration-section {
+      text-align: center; padding: 100px 5%; border-top: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--bg) 0%, #0a0a0c 100%);
     }
-    .feed-item:last-child { border-bottom: none; }
-    .feed-time { font-size: 11px; color: var(--muted); white-space: nowrap; }
-    .feed-content { flex: 1; font-size: 13px; }
-    .feed-title { font-weight: 600; margin-bottom: 4px; }
-    
-    .pending-approval {
-      background: rgba(245,158,11,0.1); border: 1px solid var(--warning);
-      padding: 16px; border-radius: 8px; margin-bottom: 16px;
+    .integration-section h2 { font-size: 36px; letter-spacing: -1px; margin-bottom: 20px; }
+    .code-window {
+      background: #000; border: 1px solid var(--border); border-radius: 12px;
+      max-width: 700px; margin: 40px auto; text-align: left;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5); overflow: hidden;
     }
-    .pending-btn {
-      display: inline-block; background: var(--warning); color: #000;
-      padding: 8px 16px; border-radius: 6px; text-decoration: none;
-      font-size: 13px; font-weight: 600; margin-top: 10px;
+    .code-header {
+      background: #111; padding: 12px 20px; display: flex; gap: 8px;
+      border-bottom: 1px solid var(--border);
     }
-
-    /* Chat UI */
-    .chat-box {
-      background: var(--surface); border: 1px solid var(--primary);
-      border-radius: var(--radius); overflow: hidden; margin-bottom: 20px;
-      box-shadow: 0 0 15px rgba(59,130,246,0.3); display: none;
-    }
-    .chat-header {
-      background: var(--primary); color: white; padding: 10px 15px;
-      font-weight: 600; display: flex; align-items: center; gap: 8px;
-    }
-    .chat-body { padding: 15px; max-height: 250px; overflow-y: auto; background: var(--bg); }
-    .chat-msg { margin-bottom: 12px; max-width: 85%; font-size: 13px; line-height: 1.4; }
-    .msg-buyer { margin-left: auto; background: var(--primary); color: white; padding: 10px; border-radius: 12px 12px 0 12px; }
-    .msg-supplier { margin-right: auto; background: var(--surface2); color: white; padding: 10px; border-radius: 12px 12px 12px 0; }
-    .msg-sender { font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #333; }
+    .dot:nth-child(1) { background: #ef4444; }
+    .dot:nth-child(2) { background: #eab308; }
+    .dot:nth-child(3) { background: #22c55e; }
+    .code-body { padding: 24px; color: #a1a1aa; font-family: monospace; font-size: 14px; line-height: 1.5; }
+    .code-body span { color: #60a5fa; }
+    .code-body .string { color: #34d399; }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>🏭 Warehouse Command Center</h1>
-    <div style="display:flex;gap:15px;">
-      <span id="connection-status" style="color:var(--success);font-size:14px;display:flex;align-items:center;gap:6px;">
-        <span style="width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 10px var(--success);"></span> Live
-      </span>
+  <nav>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      Aura
     </div>
-  </header>
-
-  <div class="grid">
-    <!-- Inventory Overview -->
-    <div class="card">
-      <div class="card-title">📦 Inventory Overview</div>
-      <table>
-        <thead>
-          <tr>
-            <th>SKU</th>
-            <th>Item</th>
-            <th>Stock</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="inventory-body">
-          <tr><td colspan="5" style="text-align:center;color:var(--muted);">Loading...</td></tr>
-        </tbody>
-      </table>
+    <div class="nav-links">
+      <a href="#features">Platform</a>
+      <a href="#integrations">Integrations</a>
+      <a href="dashboard.html" class="btn btn-secondary" style="padding: 8px 16px; margin-left: 20px;">Launch App</a>
     </div>
+  </nav>
 
-    <!-- Live Activity & Pending Approvals -->
-    <div>
-      <!-- Negotiation Chat -->
-      <div id="negotiation-chat" class="chat-box">
-        <div class="chat-header">
-          <span style="animation:pulse 1s infinite">🤖</span> B2B Negotiation Agent
-        </div>
-        <div id="chat-messages" class="chat-body"></div>
-      </div>
-
-      <div id="pending-container"></div>
-
-      <div class="card">
-        <div class="card-title">⚡ Live Activity Feed</div>
-        <div class="feed" id="activity-feed">
-          <div style="text-align:center;color:var(--muted);padding:20px;">Waiting for events...</div>
-        </div>
-      </div>
+  <section class="hero">
+    <div class="badge">Powered by Multi-Agent AI</div>
+    <h1>Plug in your warehouse APIs. Our agents handle the rest.</h1>
+    <p class="subtitle">Aura connects your existing WMS with autonomous AI agents that negotiate with suppliers, manage inventory, and execute B2B payments on autopilot.</p>
+    <div class="cta-container">
+      <a href="dashboard.html" class="btn btn-primary">Try Interactive Demo</a>
+      <a href="#integrations" class="btn btn-secondary">View Documentation</a>
     </div>
-  </div>
+  </section>
 
-<script>
-let state = { products: [], pending: [] };
+  <section id="features" class="features">
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <h3>Senso Knowledge Discovery</h3>
+      <p>Agents scan verified supplier documentation in real-time, parsing trust scores and historical data to select the perfect vendor for every restock.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💬</div>
+      <h3>LLM B2B Negotiation</h3>
+      <p>Watch as autonomous agents reach out to suppliers, negotiate bulk discounts over messaging APIs, and lock in the best possible margins.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💳</div>
+      <h3>Prava Smart Escrow</h3>
+      <p>Transactions execute flawlessly through Prava's B2B payment rails. Funds are held securely until the shipment is confirmed at your dock.</p>
+    </div>
+  </section>
 
-// Consume 1 unit to simulate usage
-async function consumeItem(id) {
-  try {
-    await fetch('/api/inventory/consume', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, amount: 1 })
-    });
-  } catch(e) { console.error(e); }
-}
-
-const es = new EventSource('/events');
-es.onmessage = (e) => {
-  const { type, data, ts } = JSON.parse(e.data);
-  const time = new Date(ts).toLocaleTimeString();
-  
-  if (type === 'connected') {
-    state.products = data.products;
-    renderInventory();
-  } else if (type === 'inventory_update') {
-    state.products = state.products.map(p => p.id === data.product.id ? data.product : p);
-    renderInventory();
-  } else if (type === 'negotiation_start') {
-    document.getElementById('negotiation-chat').style.display = 'block';
-    document.getElementById('chat-messages').innerHTML = '';
-    addFeed(time, `🤖 Autonomous Negotiation Started`, `Targeting $${data.targetPrice.toFixed(2)} per ${data.product.name}`);
-  } else if (type === 'negotiation_msg') {
-    const chat = document.getElementById('chat-messages');
-    const isBuyer = data.sender === 'AI Buyer';
-    chat.innerHTML += `
-      <div class="chat-msg ${isBuyer ? 'msg-buyer' : 'msg-supplier'}">
-        <div class="msg-sender">${data.sender}</div>
-        ${data.text}
-      </div>
-    `;
-    chat.scrollTop = chat.scrollHeight;
-  } else if (type === 'negotiation_end') {
-    addFeed(time, `🤝 Deal Reached`, `Final Price: $${data.finalUnitPrice.toFixed(2)}. Preparing Prava Escrow...`);
-    setTimeout(() => { document.getElementById('negotiation-chat').style.display = 'none'; }, 8000);
-  } else if (type === 'pending_added') {
-    state.pending.push(data);
-    renderPending();
-    addFeed(time, `🚨 Restock Request: ${data.product.name}`, `Awaiting Prava payment approval. Order: ${data.orderId}`);
-  } else if (type === 'restock_complete') {
-    state.pending = state.pending.filter(p => p.orderId !== data.orderId);
-    renderPending();
-    addFeed(time, `✅ Restock Complete`, `${data.product.restock_qty}x ${data.product.name} ordered. Invoice sent.`);
-  } else if (type === 'step') {
-    addFeed(time, `🔄 ${data.label}`, data.detail);
-  }
-};
-
-function renderInventory() {
-  const tbody = document.getElementById('inventory-body');
-  tbody.innerHTML = state.products.map(p => {
-    let statusClass = 'status-ok';
-    let statusText = 'OK';
-    if (p.stock === 0) { statusClass = 'status-out'; statusText = 'OUT OF STOCK'; }
-    else if (p.stock <= p.threshold) { statusClass = 'status-low'; statusText = 'LOW'; }
+  <section id="integrations" class="integration-section">
+    <h2>Integrate with one endpoint</h2>
+    <p class="subtitle" style="margin: 0 auto;">Point Aura at your internal inventory API and we automatically map your SKUs.</p>
     
-    return `
-      <tr>
-        <td style="color:var(--muted);font-family:monospace;">#${p.id}</td>
-        <td style="font-weight:500;">${p.name}</td>
-        <td><b>${p.stock}</b> <span style="font-size:11px;color:var(--muted);">/ thres:${p.threshold}</span></td>
-        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-        <td><button class="action-btn" onclick="consumeItem(${p.id})">Consume 1</button></td>
-      </tr>
-    `;
-  }).join('');
-}
-
-function renderPending() {
-  const container = document.getElementById('pending-container');
-  container.innerHTML = state.pending.map(p => `
-    <div class="pending-approval">
-      <div style="font-weight:600;margin-bottom:5px;">⏳ Awaiting Approval: ${p.product.name}</div>
-      <div style="font-size:13px;">Order ${p.orderId} — Total: $${(p.product.price * p.product.restock_qty).toFixed(2)}</div>
-      <a href="${p.iframeUrl}" target="_blank" class="pending-btn">👆 Pay via Prava</a>
-    </div>
-  `).join('');
-}
-
-function addFeed(time, title, detail) {
-  const feed = document.getElementById('activity-feed');
-  if(feed.innerText.includes('Waiting')) feed.innerHTML = '';
-  feed.innerHTML = `
-    <div class="feed-item">
-      <div class="feed-time">${time}</div>
-      <div class="feed-content">
-        <div class="feed-title">${title}</div>
-        <div style="color:var(--muted);">${detail}</div>
+    <div class="code-window">
+      <div class="code-header">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+      <div class="code-body">
+        <span>const</span> aura = <span>new</span> AuraAgent({<br>
+        &nbsp;&nbsp;apiKey: <span class="string">"aur_prod_9X3jf8L"</span>,<br>
+        &nbsp;&nbsp;webhookUrl: <span class="string">"https://your-wms.com/webhooks"</span>,<br>
+        &nbsp;&nbsp;integrations: {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;messaging: <span class="string">"linq"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;payments: <span class="string">"prava"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;knowledgeBase: <span class="string">"senso"</span><br>
+        &nbsp;&nbsp;}<br>
+        });<br><br>
+        <span>await</span> aura.startAutonomousOperations();
       </div>
     </div>
-  ` + feed.innerHTML;
-}
-</script>
+  </section>
+
 </body>
 </html>
