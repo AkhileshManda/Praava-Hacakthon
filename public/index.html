@@ -182,26 +182,14 @@
   </section>
 
   <section id="integrations" class="integration-section">
-    <h2>Integrate with one endpoint</h2>
-    <p class="subtitle" style="margin: 0 auto;">Point Aura at your internal inventory API and we automatically map your SKUs.</p>
+    <h2>SDK Coming Soon</h2>
+    <p class="subtitle" style="margin: 0 auto; margin-bottom: 40px;">Point Aura at your internal inventory API and we automatically map your SKUs. Join the waitlist for early access.</p>
     
-    <div class="code-window">
-      <div class="code-header">
-        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-      </div>
-      <div class="code-body">
-        <span>const</span> aura = <span>new</span> AuraAgent({<br>
-        &nbsp;&nbsp;apiKey: <span class="string">"aur_prod_9X3jf8L"</span>,<br>
-        &nbsp;&nbsp;webhookUrl: <span class="string">"https://your-wms.com/webhooks"</span>,<br>
-        &nbsp;&nbsp;integrations: {<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;messaging: <span class="string">"linq"</span>,<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;payments: <span class="string">"prava"</span>,<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;knowledgeBase: <span class="string">"senso"</span><br>
-        &nbsp;&nbsp;}<br>
-        });<br><br>
-        <span>await</span> aura.startAutonomousOperations();
-      </div>
-    </div>
+    <form action="mailto:founders@aura.local" method="GET" style="display: flex; gap: 12px; justify-content: center; max-width: 500px; margin: 0 auto;">
+      <input type="email" name="subject" value="Aura SDK Waitlist" style="display:none;">
+      <input type="email" placeholder="Enter your work email..." required style="flex: 1; padding: 14px 20px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--fg); font-size: 15px; outline: none;">
+      <button type="submit" class="btn btn-primary" style="border: none;">Join Waitlist</button>
+    </form>
   </section>
 
 </body>
