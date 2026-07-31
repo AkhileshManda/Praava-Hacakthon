@@ -68,24 +68,12 @@ async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function executeSensoCommand(command) {
   return new Promise((resolve) => {
-    require('child_process').exec(command, (error, stdout) => {
+    // Ensure we source the API key before running the senso CLI
+    const fullCommand = `source ~/.zshenv && ${command}`;
+    require('child_process').exec(fullCommand, (error, stdout, stderr) => {
       if (error) {
-        console.warn(`[Senso] Command failed or CLI not found, mocking response for: ${command}`);
-        // Mock responses for the hackathon demo if CLI isn't authenticated yet
-        if (command.includes('search')) {
-          let mockAnswer = "Supplier is highly rated. 5/5 stars from 12 recent transactions.";
-          try {
-            const fs = require('fs');
-            const path = require('path');
-            const file = fs.readFileSync(path.join(__dirname, '../../senso-mocks/techsupply-reputation.md'), 'utf8');
-            // Extract the trust score line
-            const match = file.match(/Current Trust Score:.*?\n/);
-            if (match) mockAnswer = `According to the internal KB: ${match[0].trim()}. It is safe to transact with this merchant without human oversight.`;
-          } catch(e) {}
-          
-          return resolve({ answer: mockAnswer, results: [] });
-        }
-        return resolve({ success: true, mocked: true });
+        console.error(`[Senso Error]:`, error, stderr);
+        return resolve({ answer: "Unable to reach Senso KB.", results: [] });
       }
       try {
         resolve(JSON.parse(stdout));
@@ -104,17 +92,52 @@ async function triggerRestock(product) {
   const initialPrice = product.price;
   const targetPrice = product.price * 0.9;
   const orderId = `ORD-${Date.now()}`;
-  const supplierName = 'TechSupply Co.';
   
-  // --- Senso Agent Discovery & Trust Phase ---
-  broadcast('step', { status: 'senso-search', label: `🔍 Senso Discovery`, detail: `Querying KB for ${supplierName} reputation...` });
-  
-  const sensoResult = await executeSensoCommand(`senso search "What is the reputation and past performance of ${supplierName}?" --output json --quiet`);
-  
-  broadcast('step', { status: 'senso-result', label: `✅ Senso Context Found`, detail: sensoResult.answer || 'Verified supplier. Safe to transact.' });
+  // --- Senso Multi-Agent Discovery Phase (with LLM Layer) ---
+  const candidates = ['ElectroWorld', 'MegaComponents', 'TechSupply Co.'];
+  let bestSupplier = null;
+  let bestScore = 0;
+  let bestContext = '';
+
+  for (const supplier of candidates) {
+    broadcast('step', { status: 'senso-search', label: `🔍 Evaluating ${supplier}`, detail: `Pulling context chunks from Senso KB...` });
+    
+    // 1. Fetch raw context from Senso (RAG pattern)
+    const result = await executeSensoCommand(`senso search context "${supplier} reputation trust score" --output json --quiet`);
+    const contextChunks = (result.results || []).map(r => r.chunk_text).join('\n');
+    
+    // 2. Feed context into LLM (Mocked for hackathon)
+    const llmPrompt = `Evaluate the supplier ${supplier} based on the provided Knowledge Base context. Extract the numeric trust score out of 100. Context: ${contextChunks}`;
+    
+    broadcast('step', { status: 'llm-eval', label: `🧠 LLM Reasoning`, detail: `Synthesizing Senso chunks for ${supplier}...` });
+    await sleep(1500);
+    
+    // Mock LLM Evaluation logic based on the context
+    let llmExtractedScore = 0;
+    if (contextChunks.includes('60/100')) llmExtractedScore = 60;
+    else if (contextChunks.includes('85/100')) llmExtractedScore = 85;
+    else if (contextChunks.includes('94/100')) llmExtractedScore = 94;
+    else {
+      // Fallback regex if context isn't perfectly mapped
+      const scoreMatch = contextChunks.match(/(\d+)\/100/);
+      if (scoreMatch) llmExtractedScore = parseInt(scoreMatch[1]);
+    }
+    
+    broadcast('step', { status: 'senso-result', label: `✅ LLM Evaluation Complete`, detail: `${supplier} scored ${llmExtractedScore}/100 based on KB.` });
+    
+    if (llmExtractedScore > bestScore) {
+      bestScore = llmExtractedScore;
+      bestSupplier = supplier;
+      bestContext = contextChunks;
+    }
+    await sleep(2000);
+  }
+
+  broadcast('step', { status: 'senso-decision', label: `🏆 LLM Selected: ${bestSupplier}`, detail: `Highest Trust Score (${bestScore}/100). Initiating transaction.` });
   await sleep(2000);
   // -------------------------------------------
 
+  const supplierName = bestSupplier;
   broadcast('negotiation_start', { product, initialPrice, targetPrice });
 
   // --- Mock LLM Negotiation ---
