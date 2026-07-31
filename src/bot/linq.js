@@ -12,15 +12,24 @@ function initBot(dbModule) {
 }
 
 async function sendApprovalMessage(phoneNumber, product, iframeUrl) {
+  // Clean formatting from user inputs
+  let cleanFromNumber = process.env.LINQ_FROM_NUMBER ? process.env.LINQ_FROM_NUMBER.replace(/[^\d+]/g, '') : '+12223334444';
+  let formattedNumber = phoneNumber ? phoneNumber.replace(/[^\d+]/g, '') : '';
+  
+  // Normalize phone number to E.164 if user forgot country code
+  if (formattedNumber && !formattedNumber.startsWith('+')) {
+    formattedNumber = `+1${formattedNumber}`;
+  }
+
   if (!LINQ_TOKEN) {
-    console.log(`[Linq Mock] Sending Approval SMS to ${phoneNumber} for ${product.name}: ${iframeUrl}`);
+    console.log(`[Linq Mock] Sending Approval SMS to ${formattedNumber} for ${product.name}: ${iframeUrl}`);
     return;
   }
   
   try {
     await axios.post(LINQ_API_URL, {
-      from: LINQ_FROM_NUMBER,
-      to: [phoneNumber],
+      from: cleanFromNumber,
+      to: [formattedNumber],
       message: {
         parts: [
           { type: 'text', value: `🚨 B2B Autonomous Order Alert\n\nYour warehouse AI has negotiated a restock for ${product.name}.\n\nPlease approve and fund the escrow via Prava:\n${iframeUrl}` }
@@ -28,13 +37,19 @@ async function sendApprovalMessage(phoneNumber, product, iframeUrl) {
       }
     }, { headers: { Authorization: `Bearer ${LINQ_TOKEN}` } });
   } catch (err) {
-    console.error('Linq sendApprovalMessage error:', err.message);
+    console.error('Linq sendApprovalMessage error:', err.response?.data || err.message);
   }
 }
 
 async function sendInvoice(phoneNumber, pdfBuffer) {
+  let cleanFromNumber = process.env.LINQ_FROM_NUMBER ? process.env.LINQ_FROM_NUMBER.replace(/[^\d+]/g, '') : '+12223334444';
+  let formattedNumber = phoneNumber ? phoneNumber.replace(/[^\d+]/g, '') : '';
+  if (formattedNumber && !formattedNumber.startsWith('+')) {
+    formattedNumber = `+1${formattedNumber}`;
+  }
+
   if (!LINQ_TOKEN) {
-    console.log(`[Linq Mock] Sending Invoice PDF to ${phoneNumber}`);
+    console.log(`[Linq Mock] Sending Invoice PDF to ${formattedNumber}`);
     return;
   }
   
@@ -52,8 +67,8 @@ async function sendInvoice(phoneNumber, pdfBuffer) {
     
     // 2. Send the message with the media attachment
     await axios.post(LINQ_API_URL, {
-      from: LINQ_FROM_NUMBER,
-      to: [phoneNumber],
+      from: cleanFromNumber,
+      to: [formattedNumber],
       message: {
         parts: [
           { type: 'text', value: `✅ Escrow funded! Here is your invoice for the restock.` },
@@ -62,7 +77,7 @@ async function sendInvoice(phoneNumber, pdfBuffer) {
       }
     }, { headers: { Authorization: `Bearer ${LINQ_TOKEN}` } });
   } catch (err) {
-    console.error('Linq sendInvoice error:', err.message);
+    console.error('Linq sendInvoice error:', err.response?.data || err.message);
   }
 }
 
