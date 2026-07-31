@@ -94,12 +94,25 @@ async function triggerRestock(product) {
   const orderId = `ORD-${Date.now()}`;
   
   // --- Senso Multi-Agent Discovery Phase (with LLM Layer) ---
-  const candidates = ['ElectroWorld', 'MegaComponents', 'TechSupply Co.'];
+  broadcast('step', { status: 'senso-search', label: `🌐 Global Discovery`, detail: `Scanning Senso KB for all available suppliers...` });
+  
+  const discoveryResult = await executeSensoCommand(`senso search content "reputation" --output json --quiet`);
+  const candidates = (discoveryResult.contents || [])
+    .filter(c => c.title.includes('reputation.md'))
+    .map(c => c.title.split('-reputation.md')[0]); // e.g. 'techsupply', 'electroworld'
+
+  if (candidates.length === 0) {
+    candidates.push('TechSupply Co.'); // Fallback just in case
+  } else {
+    broadcast('step', { status: 'senso-result', label: `🔍 Discovery Complete`, detail: `Found ${candidates.length} potential suppliers: ${candidates.join(', ')}` });
+  }
+
   let bestSupplier = null;
   let bestScore = 0;
   let bestContext = '';
 
-  for (const supplier of candidates) {
+  for (const rawSupplier of candidates) {
+    const supplier = rawSupplier.charAt(0).toUpperCase() + rawSupplier.slice(1); // e.g. Techsupply
     broadcast('step', { status: 'senso-search', label: `🔍 Evaluating ${supplier}`, detail: `Pulling context chunks from Senso KB...` });
     
     // 1. Fetch raw context from Senso (RAG pattern)
