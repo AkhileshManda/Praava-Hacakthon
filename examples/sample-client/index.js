@@ -1,9 +1,9 @@
-require('dotenv').config({ path: '../warehouse-assistant/.env' });
+require('dotenv').config({ path: '../../.env' });
 const express = require('express');
 const path = require('path');
 
 // Simulate npm install @aura-hq/sdk by requiring the local file
-const AuraAgent = require('../warehouse-assistant/src/sdk/AuraAgent');
+const AuraAgent = require('../../src/sdk/AuraAgent');
 
 const app = express();
 app.use(express.static('public'));
