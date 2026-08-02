@@ -15,7 +15,6 @@ async function createPravaSession({ orderId, product, quantity, totalAmount }) {
           name: 'Warehouse Agent',
           url: 'https://www.example.com',
           country_code_iso2: 'US',
-          category: 'B2B',
         },
         product_details: [{
           description: product.name,
