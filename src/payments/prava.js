@@ -87,6 +87,13 @@ async function pollPaymentResult(sessionId, onTick) {
             response_code: "00"
           })
         });
+        
+        console.log(`\n======================================================`);
+        console.log(`[SPONSOR INTEGRATION: PRAVA SMART ESCROW SUCCESS]`);
+        console.log(`Action: Reported status APPROVED to session ${sessionId}`);
+        console.log(`Transaction ID (Ref): ${txnRefId}`);
+        console.log(`======================================================\n`);
+        
         continue; // Next tick should now return 'completed'
       }
 

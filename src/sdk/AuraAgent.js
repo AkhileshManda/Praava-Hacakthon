@@ -25,6 +25,13 @@ class AuraAgent extends EventEmitter {
           console.error(`[Aura SDK Senso Error]:`, error, stderr);
           return resolve({ answer: "Unable to reach Senso KB.", results: [] });
         }
+        
+        console.log(`\n======================================================`);
+        console.log(`[SPONSOR INTEGRATION: SENSO KB SUCCESS]`);
+        console.log(`Command Executed: ${command}`);
+        console.log(`KB Extraction Status: SUCCESS`);
+        console.log(`======================================================\n`);
+        
         try {
           resolve(JSON.parse(stdout));
         } catch (e) {

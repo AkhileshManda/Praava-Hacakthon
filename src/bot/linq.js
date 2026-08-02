@@ -36,6 +36,11 @@ async function sendApprovalMessage(phoneNumber, product, iframeUrl) {
         ]
       }
     }, { headers: { Authorization: `Bearer ${LINQ_TOKEN}` } });
+    
+    console.log(`\n======================================================`);
+    console.log(`[SPONSOR INTEGRATION: LINQ SMS SUCCESS]`);
+    console.log(`Action: Dispatched Prava Approval SMS to ${formattedNumber}`);
+    console.log(`======================================================\n`);
   } catch (err) {
     console.error('Linq sendApprovalMessage error:', err.response?.data || err.message);
   }
@@ -76,6 +81,12 @@ async function sendInvoice(phoneNumber, pdfBuffer) {
         ]
       }
     }, { headers: { Authorization: `Bearer ${LINQ_TOKEN}` } });
+    
+    console.log(`\n======================================================`);
+    console.log(`[SPONSOR INTEGRATION: LINQ PDF ATTACHMENT SUCCESS]`);
+    console.log(`Action: Dispatched final Escrow PDF Invoice to ${formattedNumber}`);
+    console.log(`Attachment ID: ${attachmentId}`);
+    console.log(`======================================================\n`);
   } catch (err) {
     console.error('Linq sendInvoice error:', err.response?.data || err.message);
   }
