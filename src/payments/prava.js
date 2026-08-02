@@ -4,13 +4,7 @@ const PRAVA_API_BASE   = process.env.PRAVA_API_BASE || 'https://sandbox.api.prav
 async function createPravaSession({ orderId, product, quantity, totalAmount }) {
   if (!PRAVA_SECRET_KEY) throw new Error('PRAVA_SECRET_KEY not set');
 
-  const res = await fetch(`${PRAVA_API_BASE}/v1/sessions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${PRAVA_SECRET_KEY}`,
-    },
-    body: JSON.stringify({
+  const payload = {
       user_id: process.env.DEMO_USER_ID || 'demo-user',
       user_email: process.env.DEMO_USER_EMAIL || 'demo@example.com',
       total_amount: totalAmount.toFixed(2),
@@ -30,11 +24,30 @@ async function createPravaSession({ orderId, product, quantity, totalAmount }) {
         }],
         effective_until_minutes: 15,
       }],
-    }),
+    };
+
+  console.log(`\n--- PRAVA API REQUEST ---`);
+  console.log(`Order ID: ${orderId}`);
+  console.log(`Request Body:`, JSON.stringify(payload, null, 2));
+
+  const res = await fetch(`${PRAVA_API_BASE}/v1/sessions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${PRAVA_SECRET_KEY}`,
+    },
+    body: JSON.stringify(payload),
   });
 
   const data = await res.json();
-  if (!res.ok) throw new Error(`Prava session failed [${res.status}]: ${data?.error?.message || JSON.stringify(data)}`);
+  if (!res.ok) {
+    console.error(`[Prava API Error] ${data?.error?.message || JSON.stringify(data)}`);
+    throw new Error(`Prava session failed [${res.status}]: ${data?.error?.message || JSON.stringify(data)}`);
+  }
+  
+  console.log(`[Prava Success] Session created: ${data.session_id}`);
+  console.log(`--- END PRAVA LOG ---\n`);
+  
   return data; // { session_id, session_token, iframe_url, expires_at }
 }
 
