@@ -12,14 +12,14 @@ async function createPravaSession({ orderId, product, quantity, totalAmount }) {
     },
     body: JSON.stringify({
       user_id: process.env.DEMO_USER_ID || 'demo-user',
-      user_email: process.env.DEMO_USER_EMAIL || 'demo@warehouse.local',
+      user_email: process.env.DEMO_USER_EMAIL || 'demo@example.com',
       total_amount: totalAmount.toFixed(2),
       currency: 'USD',
       description: `Autonomous Restock: ${product.name}`,
       purchase_context: [{
         merchant_details: {
           name: 'Warehouse Agent',
-          url: 'https://warehouse.local',
+          url: 'https://www.example.com',
           country_code_iso2: 'US',
           category: 'B2B',
         },
