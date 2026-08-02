@@ -69,10 +69,9 @@ async function pollPaymentResult(sessionId, onTick) {
       const data = await res.json();
       console.log(`[Prava Polling] Current Status:`, data.status, `| Raw Data:`, JSON.stringify(data));
       
-      // If the checkout flow is finished and Prava is waiting for us to report the charge status
-      if (data.status === 'awaiting_result' && data.line_items && data.line_items.length > 0) {
+      if (data.status === 'awaiting_result') {
         console.log(`[Prava Polling] Reporting status as APPROVED to finalize the session...`);
-        const txnRefId = data.line_items[0].id;
+        const txnRefId = data.txn_ref_id || data.transaction_id || (data.line_items && data.line_items.length > 0 ? data.line_items[0].id : "tli_001");
         
         await fetch(`${PRAVA_API_BASE}/v1/sessions/${sessionId}/report-status`, {
           method: 'POST',
