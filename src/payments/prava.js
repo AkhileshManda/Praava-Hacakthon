@@ -25,7 +25,7 @@ async function createPravaSession({ orderId, product, quantity, totalAmount }) {
         },
         product_details: [{
           description: product.name,
-          unit_price: product.price.toFixed(2),
+          unit_price: (totalAmount / quantity).toFixed(2),
           quantity: quantity,
         }],
         effective_until_minutes: 15,
