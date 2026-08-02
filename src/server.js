@@ -2,7 +2,8 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') }
 const express = require('express');
 const path = require('path');
 const db = require('./inventory/db');
-const bot = require('./bot/linq');
+const linqBot = require('./bot/linq');
+const telegramBot = require('./bot/telegram');
 const invoice = require('./invoice/invoice');
 const prava = require('./payments/prava');
 
@@ -99,8 +100,9 @@ async function triggerRestock(product) {
 // Ensure DB is initialized and Bot is started before listening
 async function start() {
   await db.initDb();
+  linqBot.initBot(db);
   if (process.env.TELEGRAM_BOT_TOKEN) {
-    bot.initBot(db);
+    telegramBot.initBot(db);
   }
   
   const PORT = process.env.PORT || 3001;

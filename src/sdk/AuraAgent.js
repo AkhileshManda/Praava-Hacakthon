@@ -3,12 +3,14 @@ const { exec } = require('child_process');
 const prava = require('../payments/prava');
 const invoice = require('../invoice/invoice');
 const bot = require('../bot/linq');
+const telegramBot = require('../bot/telegram');
 
 class AuraAgent extends EventEmitter {
   constructor(config = {}) {
     super();
     this.apiKey = config.apiKey || 'aur_test_key';
     this.notifyPhone = config.notifyPhone || process.env.LINQ_TO_NUMBER;
+    this.notifyTelegramChat = config.notifyTelegramChat || process.env.TELEGRAM_CHAT_ID;
   }
 
   sleep(ms) {
@@ -114,6 +116,9 @@ class AuraAgent extends EventEmitter {
     if (this.notifyPhone) {
       await bot.sendApprovalMessage(this.notifyPhone, product, session.iframe_url);
     }
+    if (this.notifyTelegramChat) {
+      await telegramBot.sendApprovalMessage(this.notifyTelegramChat, product, session.iframe_url);
+    }
     
     this.emit('pending_added', {
       orderId, product, sessionId: session.session_id,
@@ -133,6 +138,9 @@ class AuraAgent extends EventEmitter {
       
       if (this.notifyPhone) {
         await bot.sendInvoice(this.notifyPhone, invoiceBuffer);
+      }
+      if (this.notifyTelegramChat) {
+        await telegramBot.sendInvoice(this.notifyTelegramChat, invoiceBuffer);
       }
       
       this.emit('restock_complete', {
